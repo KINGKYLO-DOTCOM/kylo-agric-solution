@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Admin Dashboard | KYLO Agric Solution</title>
+  <meta name="description" content="KYLO Agric Solution administration dashboard.">
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .admin-page {
+      background: #f5f7f4;
+      min-height: 100vh;
+    }
+
+    .admin-header {
+      background: #173b25;
+      color: #fff;
+      padding: 18px 0;
+    }
+
+    .admin-header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .admin-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .admin-brand img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 8px;
+    }
+
+    .admin-brand h1 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .admin-brand p {
+      margin: 3px 0 0;
+      opacity: .8;
+      font-size: .85rem;
+    }
+
+    .admin-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .admin-container {
+      width: min(1400px, 94%);
+      margin: 30px auto;
+    }
+
+    .admin-message {
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .admin-message.show {
+      display: block;
+    }
+
+    .admin-message.success {
+      background: #e7f6ea;
+      color: #17652b;
+    }
+
+    .admin-message.error {
+      background: #fde8e8;
+      color: #9b1c1c;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.06);
+      border-left: 4px solid #2e7d32;
+    }
+
+    .stat-card h3 {
+      margin: 0 0 8px;
+      font-size: .9rem;
+      color: #667;
+    }
+
+    .stat-card strong {
+      font-size: 1.8rem;
+      color: #173b25;
+    }
+
+    .admin-section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.05);
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      color: #173b25;
+    }
+
+    .admin-table-wrap {
+      overflow-x: auto;
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 800px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e8e5;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .admin-table th {
+      background: #f3f6f3;
+      color: #173b25;
+      font-size: .9rem;
+    }
+
+    .admin-table td {
+      font-size: .9rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+
+    .status-active,
+    .status-paid,
+    .status-confirmed,
+    .status-completed {
+      background: #dff5e4;
+      color: #17652b;
+    }
+
+    .status-pending {
+      background: #fff4d6;
+      color: #805b00;
+    }
+
+    .status-cancelled,
+    .status-failed {
+      background: #fde3e3;
+      color: #9b1c1c;
+    }
+
+    .status-processing {
+      background: #e4efff;
+      color: #245a9c;
+    }
+
+    .status-inactive {
+      background: #ececec;
+      color: #555;
+    }
+
+    .admin-form {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .admin-form .full {
+      grid-column: 1 / -1;
+    }
+
+    .admin-form label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #344;
+    }
+
+    .admin-form input,
+    .admin-form select,
+    .admin-form textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px 12px;
+      border: 1px solid #ccd4cd;
+      border-radius: 7px;
+      font: inherit;
+    }
+
+    .admin-form textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 5px;
+    }
+
+    .admin-button {
+      border: 0;
+      border-radius: 7px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .admin-button.primary {
+      background: #2e7d32;
+      color: #fff;
+    }
+
+    .admin-button.secondary {
+      background: #e9eeea;
+      color: #173b25;
+    }
+
+    .admin-button.danger {
+      background: #b42318;
+      color: #fff;
+    }
+
+    .admin-button.small {
+      padding: 7px 10px;
+      font-size: .8rem;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .toolbar input,
+    .toolbar select {
+      padding: 10px;
+      border: 1px solid #ccd4cd;
+      border-radius: 7px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading {
+      padding: 25px;
+      text-align: center;
+      color: #666;
+    }
+
+    .empty {
+      padding: 25px;
+      text-align: center;
+      color: #777;
+    }
+
+    .product-thumb {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 7px;
+      background: #eee;
+    }
+
+    @media (max-width: 1000px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 700px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-form {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-form .full {
+        grid-column: auto;
+      }
+
+      .admin-header-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body class="admin-page">
+
+<header class="admin-header">
+  <div class="admin-container admin-header-inner">
+
+    <div class="admin-brand">
+      <img src="images/kylo-agric-logo.png" alt="KYLO Agric Solution logo">
+
+      <div>
+        <h1>KYLO Agric Solution</h1>
+        <p>Administration Dashboard</p>
+      </div>
+    </div>
+
+    <div class="admin-actions">
+      <a href="index.html" class="admin-button secondary">View Website</a>
+      <button id="logoutBtn" class="admin-button danger">Logout</button>
+    </div>
+
+  </div>
+</header>
+
+<main class="admin-container">
+
+  <div id="adminMessage" class="admin-message"></div>
+
+  <section class="dashboard-grid">
+
+    <div class="stat-card">
+      <h3>Total Products</h3>
+      <strong id="statProducts">0</strong>
+    </div>
+
+    <div class="stat-card">
+      <h3>Active Products</h3>
+      <strong id="statActiveProducts">0</strong>
+    </div>
+
+    <div class="stat-card">
+      <h3>Total Orders</h3>
+      <strong id="statOrders">0</strong>
+    </div>
+
+    <div class="stat-card">
+      <h3>Pending Orders</h3>
+      <strong id="statPendingOrders">0</strong>
+    </div>
+
+    <div class="stat-card">
+      <h3>Enquiries</h3>
+      <strong id="statEnquiries">0</strong>
+    </div>
+
+    <div class="stat-card">
+      <h3>Pending Enquiries</h3>
+      <strong id="statPendingEnquiries">0</strong>
+    </div>
+
+    <div class="stat-card">
+      <h3>Customers</h3>
+      <strong id="statCustomers">0</strong>
+    </div>
+
+    <div class="stat-card">
+      <h3>Low Stock</h3>
+      <strong id="statLowStock">0</strong>
+    </div>
+
+  </section>
+
+  <!-- PRODUCTS -->
+
+  <section class="admin-section">
+
+    <div class="section-heading">
+      <h2>Product Management</h2>
+
+      <button id="newProductBtn" class="admin-button primary">
+        + Add Product
+      </button>
+    </div>
+
+    <form id="productForm" class="admin-form hidden">
+
+      <input type="hidden" id="productId">
+
+      <div>
+        <label for="productName">Product Name</label>
+        <input id="productName" required>
+      </div>
+
+      <div>
+        <label for="productCategory">Category</label>
+        <select id="productCategory" required>
+          <option value="">Select category</option>
+        </select>
+      </div>
+
+      <div class="full">
+        <label for="productDescription">Description</label>
+        <textarea id="productDescription"></textarea>
+      </div>
+
+      <div>
+        <label for="productPrice">Price</label>
+        <input id="productPrice" type="number" min="0" step="0.01">
+      </div>
+
+      <div>
+        <label for="productUnit">Unit</label>
+        <input id="productUnit" placeholder="e.g. kg, bird, system">
+      </div>
+
+      <div>
+        <label for="productStock">Stock Quantity</label>
+        <input id="productStock" type="number" min="0" step="1" value="0">
+      </div>
+
+      <div>
+        <label for="productImage">Image URL</label>
+        <input id="productImage" placeholder="images/product.jpg">
+      </div>
+
+      <div>
+        <label for="productSku">SKU</label>
+        <input id="productSku">
+      </div>
+
+      <div>
+        <label>
+          <input id="productQuoteOnly" type="checkbox">
+          Quote only
+        </label>
+      </div>
+
+      <div>
+        <label>
+          <input id="productActive" type="checkbox" checked>
+          Active product
+        </label>
+      </div>
+
+      <div class="full form-actions">
+        <button type="submit" class="admin-button primary">
+          Save Product
+        </button>
+
+        <button type="button" id="cancelProductBtn" class="admin-button secondary">
+          Cancel
+        </button>
+      </div>
+
+    </form>
+
+    <div class="toolbar">
+      <input
+        id="productSearch"
+        type="search"
+        placeholder="Search products..."
+      >
+
+      <select id="productStatusFilter">
+        <option value="all">All products</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="low">Low stock</option>
+      </select>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody id="productsTableBody">
+          <tr>
+            <td colspan="7" class="loading">Loading products...</td>
+          </tr>
+        </tbody>
+
+      </table>
+    </div>
+
+  </section>
+
+  <!-- ORDERS -->
+
+  <section class="admin-section">
+
+    <div class="section-heading">
+      <h2>Orders</h2>
+    </div>
+
+    <div class="toolbar">
+
+      <input
+        id="orderSearch"
+        type="search"
+        placeholder="Search order..."
+      >
+
+      <select id="orderStatusFilter">
+        <option value="all">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="processing">Processing</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+
+    </div>
+
+    <div class="admin-table-wrap">
+
+      <table class="admin-table">
+
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Total</th>
+            <th>Fulfilment</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody id="ordersTableBody">
+          <tr>
+            <td colspan="8" class="loading">Loading orders...</td>
+          </tr>
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+  <!-- ENQUIRIES -->
+
+  <section class="admin-section">
+
+    <div class="section-heading">
+      <h2>Customer Enquiries</h2>
+    </div>
+
+    <div class="toolbar">
+
+      <input
+        id="enquirySearch"
+        type="search"
+        placeholder="Search enquiries..."
+      >
+
+      <select id="enquiryStatusFilter">
+        <option value="all">All statuses</option>
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="quoted">Quoted</option>
+        <option value="closed">Closed</option>
+      </select>
+
+    </div>
+
+    <div class="admin-table-wrap">
+
+      <table class="admin-table">
+
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody id="enquiriesTableBody">
+          <tr>
+            <td colspan="7" class="loading">Loading enquiries...</td>
+          </tr>
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+  <!-- CUSTOMERS -->
+
+  <section class="admin-section">
+
+    <div class="section-heading">
+     

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Products | KYLO Agric Solution</title>
+
+    <meta
+        name="description"
+        content="Explore agricultural products, livestock, crops, farming inputs and agricultural technology from KYLO Agric Solution.">
+
+    <link
+        rel="icon"
+        href="images/kylo-agric-logo.png">
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+</head>
+
+
+<body>
+
+<div id="toast" class="toast"></div>
+
+
+<header class="site-header">
+
+    <div class="container nav-wrap">
+
+        <a
+            class="brand"
+            href="index.html">
+
+            <img
+                src="images/kylo-agric-logo.png"
+                alt="KYLO Agric Solution">
+
+        </a>
+
+
+        <button
+            id="menuToggle"
+            class="menu-toggle"
+            aria-expanded="false">
+
+            ☰
+
+        </button>
+
+
+        <nav id="siteNav">
+
+            <a href="index.html">
+                Home
+            </a>
+
+            <a
+                href="products.html"
+                class="active">
+
+                Products
+
+            </a>
+
+            <a href="index.html#about">
+                About
+            </a>
+
+            <a href="index.html#vision">
+                Vision & Mission
+            </a>
+
+            <a href="knowledge.html">
+                Knowledge Hub
+            </a>
+
+            <a href="account.html">
+                Account
+            </a>
+
+            <a href="enquiry.html">
+                Enquire
+            </a>
+
+            <a href="cart.html">
+                Cart
+                <span data-cart-count>0</span>
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+<main>
+
+
+<section class="page-hero">
+
+    <div class="container">
+
+        <span class="eyebrow">
+            KYLO AGRIC SOLUTION
+        </span>
+
+        <h1>
+            Agricultural Products
+        </h1>
+
+        <p>
+            Explore crops, livestock, farming inputs,
+            irrigation and agricultural technology solutions.
+        </p>
+
+    </div>
+
+</section>
+
+
+<section class="section">
+
+    <div class="container">
+
+
+        <div class="search-box">
+
+            <input
+                id="productSearch"
+                type="search"
+                placeholder="Search products, livestock, crops..."
+                autocomplete="off">
+
+        </div>
+
+
+        <div class="filter-buttons">
+
+            <button
+                class="filter-btn active"
+                data-filter="all">
+
+                All
+
+            </button>
+
+            <button
+                class="filter-btn"
+                data-filter="Crops">
+
+                Crops
+
+            </button>
+
+            <button
+                class="filter-btn"
+                data-filter="Horticulture">
+
+                Horticulture
+
+            </button>
+
+            <button
+                class="filter-btn"
+                data-filter="Fruits">
+
+                Fruits
+
+            </button>
+
+            <button
+                class="filter-btn"
+                data-filter="Poultry">
+
+                Poultry
+
+            </button>
+
+            <button
+                class="filter-btn"
+                data-filter="Livestock">
+
+                Livestock
+
+            </button>
+
+            <button
+                class="filter-btn"
+                data-filter="Technology">
+
+                Technology
+
+            </button>
+
+            <button
+                class="filter-btn"
+                data-filter="Inputs">
+
+                Inputs
+
+            </button>
+
+        </div>
+
+
+        <div
+            id="productGrid"
+            class="product-grid">
+
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<footer class="footer">
+
+    <div class="container footer-grid">
+
+        <div>
+
+            <img
+                class="footer-logo"
+                src="images/kylo-agric-logo.png"
+                alt="KYLO Agric Solution">
+
+            <p>
+                Growing Food. Building Futures.
+            </p>
+
+        </div>
+
+
+        <div>
+
+            <h4>
+                Explore
+            </h4>
+
+            <a href="index.html">
+                Home
+            </a>
+
+            <a href="products.html">
+                Products
+            </a>
+
+            <a href="knowledge.html">
+                Knowledge Hub
+            </a>
+
+            <a href="account.html">
+                Account
+            </a>
+
+        </div>
+
+
+        <div>
+
+            <h4>
+                Contact
+            </h4>
+
+            <a href="tel:+263787470753">
+                +263 787 470 753
+            </a>
+
+            <a href="tel:+263715864893">
+                +263 715 864 893
+            </a>
+
+            <a href="mailto:kyloagricsolutions@gmai.com">
+                kyloagricsolutions@gmai.com
+            </a>
+
+        </div>
+
+
+        <div>
+
+            <h4>
+                Policies
+            </h4>
+
+            <a href="legal/privacy.html">
+                Privacy
+            </a>
+
+            <a href="legal/terms.html">
+                Terms
+            </a>
+
+            <a href="legal/refunds.html">
+                Refunds
+            </a>
+
+            <a href="legal/delivery.html">
+                Delivery
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer-bottom">
+
+        © 2026 KYLO Agric Solution.
+        All rights reserved.
+
+    </div>
+
+</footer>
+
+
+<a
+    class="whatsapp-float"
+    href="https://wa.me/263787470753"
+    target="_blank"
+    rel="noopener">
+
+    WA
+
+</a>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/config.js"></script>
+
+<script src="js/supabase.js"></script>
+
+<script src="js/app.js"></script>
+
+</body>
+
+</html>

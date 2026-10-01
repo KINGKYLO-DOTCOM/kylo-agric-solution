@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Account Login | KYLO Agric Solution</title>
+
+    <link
+        rel="icon"
+        href="images/kylo-agric-logo.png">
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+</head>
+
+
+<body>
+
+<div id="toast" class="toast"></div>
+
+
+<header class="site-header">
+
+    <div class="container nav-wrap">
+
+        <a
+            class="brand"
+            href="index.html">
+
+            <img
+                src="images/kylo-agric-logo.png"
+                alt="KYLO Agric Solution">
+
+        </a>
+
+
+        <nav>
+
+            <a href="index.html">
+                Home
+            </a>
+
+            <a href="products.html">
+                Products
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+<main>
+
+<section class="section">
+
+    <div class="container auth-container">
+
+
+        <div class="auth-card">
+
+            <div class="auth-heading">
+
+                <img
+                    src="images/kylo-agric-logo.png"
+                    alt="KYLO Agric Solution">
+
+                <h1>
+                    Customer Account
+                </h1>
+
+                <p>
+                    Login or create your KYLO Agric Solution account.
+                </p>
+
+            </div>
+
+
+            <!-- LOGIN -->
+
+            <form id="loginForm">
+
+                <h2>
+                    Login
+                </h2>
+
+                <label>
+                    Email
+                </label>
+
+                <input
+                    id="loginEmail"
+                    type="email"
+                    required
+                    placeholder="Your email">
+
+                <label>
+                    Password
+                </label>
+
+                <input
+                    id="loginPassword"
+                    type="password"
+                    required
+                    placeholder="Your password">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary full-width">
+
+                    Login
+
+                </button>
+
+            </form>
+
+
+            <div class="form-divider">
+                OR
+            </div>
+
+
+            <!-- REGISTER -->
+
+            <form id="registerForm">
+
+                <h2>
+                    Create Account
+                </h2>
+
+                <label>
+                    Full Name
+                </label>
+
+                <input
+                    id="registerName"
+                    type="text"
+                    required
+                    placeholder="Your full name">
+
+                <label>
+                    Phone Number
+                </label>
+
+                <input
+                    id="registerPhone"
+                    type="tel"
+                    placeholder="+263...">
+
+                <label>
+                    Email
+                </label>
+
+                <input
+                    id="registerEmail"
+                    type="email"
+                    required
+                    placeholder="Your email">
+
+                <label>
+                    Password
+                </label>
+
+                <input
+                    id="registerPassword"
+                    type="password"
+                    minlength="6"
+                    required
+                    placeholder="At least 6 characters">
+
+                <button
+                    type="submit"
+                    class="btn btn-outline full-width">
+
+                    Create Account
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/config.js"></script>
+
+<script src="js/supabase.js"></script>
+
+<script src="js/app.js"></script>
+
+<script src="js/auth.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Payment Status | KYLO Agric Solution
+  </title>
+
+  <meta
+    name="description"
+    content="Payment status and order confirmation for KYLO Agric Solution."
+  >
+
+  <link
+    rel="stylesheet"
+    href="css/style.css"
+  >
+
+</head>
+
+
+<body>
+
+<header class="site-header">
+
+  <div class="container nav-wrap">
+
+    <a
+      href="index.html"
+      class="brand"
+    >
+
+      <img
+        src="images/kylo-agric-logo.png"
+        alt="KYLO Agric Solution logo"
+        class="brand-logo"
+      >
+
+    </a>
+
+
+    <button
+      class="menu-toggle"
+      id="menuToggle"
+      aria-label="Open navigation"
+    >
+      ☰
+    </button>
+
+
+    <nav
+      class="main-nav"
+      id="mainNav"
+    >
+
+      <a href="index.html">
+        Home
+      </a>
+
+      <a href="products.html">
+        Products
+      </a>
+
+      <a href="account.html">
+        My Account
+      </a>
+
+    </nav>
+
+  </div>
+
+</header>
+
+
+<main>
+
+<section class="page-hero">
+
+  <div class="container">
+
+    <h1>
+      Thank You
+    </h1>
+
+    <p>
+      Your order has been submitted.
+    </p>
+
+  </div>
+
+</section>
+
+
+<section class="content-section">
+
+  <div class="container">
+
+    <div class="payment-box">
+
+      <h2>
+        Order Processing
+      </h2>
+
+
+      <p>
+        Your order has been created successfully.
+      </p>
+
+
+      <p>
+
+        Order:
+
+        <strong id="orderId">
+          Loading...
+        </strong>
+
+      </p>
+
+
+      <p>
+        Payment confirmation may take a short
+        time. You can check your order status
+        from your account.
+      </p>
+
+
+      <a
+        href="account.html"
+        class="btn btn-primary"
+      >
+        View My Orders
+      </a>
+
+
+      <a
+        href="products.html"
+        class="btn btn-secondary"
+      >
+        Continue Shopping
+      </a>
+
+    </div>
+
+  </div>
+
+</section>
+
+</main>
+
+
+<footer class="site-footer">
+
+  <div class="container">
+
+    <p>
+      © 2026 KYLO Agric Solution.
+      All rights reserved.
+    </p>
+
+  </div>
+
+</footer>
+
+
+<script src="js/app.js"></script>
+
+<script>
+
+const params =
+  new URLSearchParams(
+    window.location.search
+  );
+
+const order =
+  params.get("order");
+
+const orderElement =
+  document.getElementById(
+    "orderId"
+  );
+
+if (orderElement) {
+
+  orderElement.textContent =
+    order || "Unavailable";
+
+}
+
+</script>
+
+</body>
+
+</html>
