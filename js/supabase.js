@@ -3,10 +3,10 @@
     const config = window.KYLO_CONFIG || {};
 
     const configured =
-        config.https://agbxvfdkcjkoadqpxbia.supabase.co &&
-        config.sb_publishable_CrixC6qtHkPj_rHO7pYdUg_DoPE77RO &&
-        !config.https://agbxvfdkcjkoadqpxbia.supabase.co.includes("YOUR-PROJECT") &&
-        !config.sb_publishable_CrixC6qtHkPj_rHO7pYdUg_DoPE77RO.includes("YOUR_SUPABASE");
+        config.SUPABASE_URL &&
+        config.SUPABASE_ANON_KEY &&
+        !config.SUPABASE_URL.includes("https://agbxvfdkcjkoadqpxbia.supabase.co") &&
+        !config.SUPABASE_ANON_KEY.includes("sb_publishable_CrixC6qtHkPj_rHO7pYdUg_DoPE77RO");
 
     if (!configured) {
 
@@ -32,8 +32,8 @@
 
     window.kyloSupabase =
         window.supabase.createClient(
-            config.https://agbxvfdkcjkoadqpxbia.supabase.co,
-            config.sb_publishable_CrixC6qtHkPj_rHO7pYdUg_DoPE77RO,
+            config.SUPABASE_URL,
+            config.SUPABASE_ANON_KEY,
             {
                 auth: {
                     persistSession: true,
