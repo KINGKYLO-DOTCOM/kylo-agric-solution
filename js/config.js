@@ -4,7 +4,7 @@ window.KYLO_CONFIG = {
     "https://agbxvfdkcjkoadqpxbia.supabase.co",
 
   SUPABASE_ANON_KEY:
-    "YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY",
+    "sb_publishable_CrixC6qtHkPj_rHO7pYdUg_DoPE77RO",
 
 
   COMPANY: {
