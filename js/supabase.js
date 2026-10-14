@@ -1,46 +1,44 @@
-(function () {
 
+(function () {
     const config = window.KYLO_CONFIG || {};
 
+    const url = config.SUPABASE_URL;
+    const key = config.SUPABASE_ANON_KEY;
+
     const configured =
-        config.SUPABASE_URL &&
-        config.SUPABASE_ANON_KEY &&
-        !config.SUPABASE_URL.includes("https://agbxvfdkcjkoadqpxbia.supabase.co") &&
-        !config.SUPABASE_ANON_KEY.includes("sb_publishable_CrixC6qtHkPj_rHO7pYdUg_DoPE77RO");
+        typeof url === "string" &&
+        /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(url) &&
+        typeof key === "string" &&
+        key.length > 20 &&
+        !url.includes("YOUR-PROJECT-REF") &&
+        !key.includes("YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY");
 
     if (!configured) {
-
         window.kyloSupabase = null;
-
-        console.warn(
-            "KYLO Supabase is not configured yet."
-        );
-
-        return;
-    }
-
-    if (!window.supabase) {
-
         console.error(
-            "Supabase library was not loaded."
+            "KYLO: Supabase configuration is missing or contains placeholders."
         );
-
-        window.kyloSupabase = null;
-
         return;
     }
 
-    window.kyloSupabase =
-        window.supabase.createClient(
-            config.SUPABASE_URL,
-            config.SUPABASE_ANON_KEY,
-            {
-                auth: {
-                    persistSession: true,
-                    autoRefreshToken: true,
-                    detectSessionInUrl: true
-                }
-            }
+    if (
+        !window.supabase ||
+        typeof window.supabase.createClient !== "function"
+    ) {
+        window.kyloSupabase = null;
+        console.error(
+            "KYLO: Supabase library was not loaded. Check the script imports."
         );
+        return;
+    }
 
+    window.kyloSupabase = window.supabase.createClient(url, key, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+        }
+    });
+
+    console.log("KYLO: Supabase client initialized.");
 })();
