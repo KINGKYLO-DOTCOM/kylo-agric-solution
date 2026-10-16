@@ -1,17 +1,32 @@
-let adminState = {
+
+/* =========================================================
+   KYLO AGRIC SOLUTION — ADMIN DASHBOARD
+   Phase 4: Products and Category Management
+   ========================================================= */
+
+const adminState = {
   products: [],
   categories: [],
   orders: [],
   enquiries: [],
   customers: [],
-  editingProductId: null
+  editingProductId: null,
+  editingCategoryId: null
 };
 
+function getSupabaseClient() {
+  const client = window.kyloSupabase || window.supabaseClient || window.supabase;
+
+  if (!client || typeof client.auth?.getSession !== "function") {
+    throw new Error("Supabase is not ready. Check the script loading order.");
+  }
+
+  return client;
+}
+
 async function getAdminToken() {
-  const {
-    data: { session },
-    error
-  } = await supabase.auth.getSession();
+  const { data: { session }, error } =
+    await getSupabaseClient().auth.getSession();
 
   if (error || !session) {
     throw new Error("Your session has expired. Please log in again.");
@@ -27,12 +42,9 @@ async function adminRequest(action, payload = {}) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
+      Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({
-      action,
-      ...payload
-    })
+    body: JSON.stringify({ action, ...payload })
   });
 
   let result;
@@ -44,27 +56,27 @@ async function adminRequest(action, payload = {}) {
   }
 
   if (!response.ok || !result.success) {
-    throw new Error(
-      result.error || "Administrator request failed."
-    );
+    throw new Error(result.error || "Administrator request failed.");
   }
 
   return result.data;
 }
 
-/* ----------------------------- ACCESS ----------------------------- */
+/* ---------------- ACCESS ---------------- */
 
 async function checkAdminAccess() {
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
+  const client = getSupabaseClient();
+  const { data: { session }, error: sessionError } =
+    await client.auth.getSession();
+
+  if (sessionError) throw sessionError;
 
   if (!session) {
     window.location.href = "auth.html?redirect=admin.html";
     return false;
   }
 
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await client
     .from("profiles")
     .select("id, full_name, role")
     .eq("id", session.user.id)
@@ -76,20 +88,79 @@ async function checkAdminAccess() {
     return false;
   }
 
-  const adminName =
-    document.getElementById("adminName");
-
-  if (adminName) {
-    adminName.textContent =
-      profile.full_name ||
-      session.user.email ||
-      "Administrator";
+  const name = document.getElementById("adminName");
+  if (name) {
+    name.textContent = profile.full_name || session.user.email || "Administrator";
   }
 
   return true;
 }
 
-/* ----------------------------- DASHBOARD ----------------------------- */
+/* ---------------- UTILITIES ---------------- */
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value ?? 0;
+}
+
+function setInputValue(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.value = value ?? "";
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function capitalize(value) {
+  const text = String(value ?? "");
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString("en-ZW", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === "") {
+    return "Quote";
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? `$${number.toFixed(2)}` : "Quote";
+}
+
+function showAdminMessage(message, isError = false) {
+  let element = document.getElementById("adminPhase4Message");
+
+  if (!element) {
+    element = document.createElement("div");
+    element.id = "adminPhase4Message";
+    element.setAttribute("role", "status");
+    element.style.cssText =
+      "margin:12px 0;padding:12px;border-radius:8px;border:1px solid #ccc;";
+    const main = document.querySelector("main") || document.body;
+    main.prepend(element);
+  }
+
+  element.textContent = message;
+  element.style.color = isError ? "#b42318" : "inherit";
+}
+
+/* ---------------- DASHBOARD STATS ---------------- */
 
 async function loadDashboardStats() {
   const stats = await adminRequest("dashboard");
@@ -104,92 +175,241 @@ async function loadDashboardStats() {
   setText("lowStock", stats.lowStock);
 }
 
-function setText(id, value) {
-  const element = document.getElementById(id);
-
-  if (element) {
-    element.textContent = value ?? 0;
-  }
-}
-
-/* ----------------------------- CATEGORIES ----------------------------- */
+/* ---------------- CATEGORIES ---------------- */
 
 async function loadCategories() {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name, slug")
-    .order("name");
+  const data = await adminRequest("get_categories");
+  adminState.categories = Array.isArray(data) ? data : [];
 
-  if (error) {
-    console.error(error);
+  renderCategorySelect();
+  renderCategoryManager();
+}
+
+function renderCategorySelect() {
+  const select = document.getElementById("productCategory");
+  if (!select) return;
+
+  const previousValue = select.value;
+  select.replaceChildren();
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select category";
+  select.appendChild(placeholder);
+
+  adminState.categories
+    .filter(category => category.is_active || category.id === previousValue)
+    .forEach(category => {
+      const option = document.createElement("option");
+      option.value = category.id;
+      option.textContent = category.name;
+      select.appendChild(option);
+    });
+
+  if (previousValue) select.value = previousValue;
+}
+
+function ensureCategoryManager() {
+  let panel = document.getElementById("categoryManager");
+  if (panel) return panel;
+
+  panel = document.createElement("section");
+  panel.id = "categoryManager";
+  panel.className = "dashboard-card";
+  panel.style.marginTop = "24px";
+  panel.innerHTML = `
+    <h2>Category Management</h2>
+    <p>Add or update categories used by your product catalogue.</p>
+    <form id="categoryForm">
+      <label for="categoryName">Category name</label>
+      <input id="categoryName" maxlength="150" required
+        placeholder="e.g. Poultry Production">
+
+      <label for="categoryDescription">Description</label>
+      <textarea id="categoryDescription" maxlength="2000"
+        placeholder="Describe this category"></textarea>
+
+      <label for="categoryImage">Image URL (optional)</label>
+      <input id="categoryImage" type="url" maxlength="1000"
+        placeholder="https://...">
+
+      <label>
+        <input id="categoryActive" type="checkbox" checked>
+        Category is active
+      </label>
+
+      <div class="admin-actions">
+        <button id="saveCategoryButton" class="btn" type="submit">
+          Save Category
+        </button>
+        <button id="resetCategoryButton" class="btn btn-outline" type="button">
+          Clear
+        </button>
+      </div>
+    </form>
+    <div style="overflow-x:auto;margin-top:20px">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Slug</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="categoriesTableBody">
+          <tr><td colspan="4">Loading categories...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const productForm = document.getElementById("productForm");
+  const parent = productForm?.parentElement ||
+    document.querySelector("main") || document.body;
+
+  parent.appendChild(panel);
+
+  panel.querySelector("#categoryForm").addEventListener(
+    "submit",
+    saveCategory
+  );
+
+  panel.querySelector("#resetCategoryButton").addEventListener(
+    "click",
+    resetCategoryForm
+  );
+
+  return panel;
+}
+
+function renderCategoryManager() {
+  ensureCategoryManager();
+
+  const tbody = document.getElementById("categoriesTableBody");
+  if (!tbody) return;
+
+  if (!adminState.categories.length) {
+    tbody.innerHTML = `<tr><td colspan="4">No categories yet.</td></tr>`;
     return;
   }
 
-  adminState.categories = data || [];
+  tbody.innerHTML = adminState.categories.map(category => `
+    <tr>
+      <td>${escapeHtml(category.name)}</td>
+      <td>${escapeHtml(category.slug)}</td>
+      <td>${category.is_active ? "Active" : "Inactive"}</td>
+      <td>
+        <button type="button" class="btn btn-small"
+          data-edit-category="${escapeHtml(category.id)}">
+          Edit
+        </button>
+      </td>
+    </tr>
+  `).join("");
 
-  const select =
-    document.getElementById("productCategory");
-
-  if (!select) return;
-
-  select.innerHTML =
-    `<option value="">Select category</option>`;
-
-  adminState.categories.forEach(category => {
-    const option =
-      document.createElement("option");
-
-    option.value = category.id;
-    option.textContent = category.name;
-
-    select.appendChild(option);
+  tbody.querySelectorAll("[data-edit-category]").forEach(button => {
+    button.addEventListener("click", () => {
+      editCategory(button.dataset.editCategory);
+    });
   });
 }
 
-/* ----------------------------- PRODUCTS ----------------------------- */
+function resetCategoryForm() {
+  adminState.editingCategoryId = null;
+
+  document.getElementById("categoryForm")?.reset();
+
+  const active = document.getElementById("categoryActive");
+  if (active) active.checked = true;
+
+  const button = document.getElementById("saveCategoryButton");
+  if (button) button.textContent = "Save Category";
+}
+
+function editCategory(id) {
+  const category = adminState.categories.find(item => item.id === id);
+  if (!category) return;
+
+  adminState.editingCategoryId = id;
+  setInputValue("categoryName", category.name);
+  setInputValue("categoryDescription", category.description);
+  setInputValue("categoryImage", category.image_url);
+
+  const active = document.getElementById("categoryActive");
+  if (active) active.checked = Boolean(category.is_active);
+
+  const button = document.getElementById("saveCategoryButton");
+  if (button) button.textContent = "Update Category";
+
+  document.getElementById("categoryManager")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
+
+async function saveCategory(event) {
+  event.preventDefault();
+
+  const button = document.getElementById("saveCategoryButton");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Saving...";
+  }
+
+  try {
+    const category = {
+      id: adminState.editingCategoryId || undefined,
+      name: document.getElementById("categoryName").value.trim(),
+      description: document.getElementById("categoryDescription").value.trim(),
+      image_url: document.getElementById("categoryImage").value.trim(),
+      is_active: document.getElementById("categoryActive").checked
+    };
+
+    await adminRequest(
+      adminState.editingCategoryId ? "update_category" : "create_category",
+      { category }
+    );
+
+    await loadCategories();
+    resetCategoryForm();
+    showAdminMessage("Category saved successfully.");
+  } catch (error) {
+    console.error("Category save failed:", error);
+    showAdminMessage(error.message, true);
+  } finally {
+    if (button) button.disabled = false;
+    if (button && !adminState.editingCategoryId) {
+      button.textContent = "Save Category";
+    }
+  }
+}
+
+/* ---------------- PRODUCTS ---------------- */
 
 async function loadProducts() {
-  const products =
-    await adminRequest("get_products");
-
-  adminState.products = products || [];
-
+  const data = await adminRequest("get_products");
+  adminState.products = Array.isArray(data) ? data : [];
   renderProducts();
 }
 
 function renderProducts() {
-  const tbody =
-    document.getElementById("productsTableBody");
-
+  const tbody = document.getElementById("productsTableBody");
   if (!tbody) return;
 
-  const search =
-    (document.getElementById("productSearch")?.value || "")
-      .toLowerCase()
-      .trim();
+  const search = (
+    document.getElementById("productSearch")?.value || ""
+  ).toLowerCase().trim();
 
-  const filtered =
-    adminState.products.filter(product => {
-      const text = [
-        product.name,
-        product.sku,
-        product.description,
-        product.categories?.name
-      ]
-        .join(" ")
-        .toLowerCase();
+  const filtered = adminState.products.filter(product => {
+    const text = [
+      product.name,
+      product.slug,
+      product.description,
+      product.short_description,
+      product.categories?.name
+    ].join(" ").toLowerCase();
 
-      return text.includes(search);
-    });
+    return text.includes(search);
+  });
 
   if (!filtered.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">
-          No products found.
-        </td>
-      </tr>
-    `;
+    tbody.innerHTML = `<tr><td colspan="8">No products found.</td></tr>`;
     return;
   }
 
@@ -197,123 +417,70 @@ function renderProducts() {
     <tr>
       <td>
         <strong>${escapeHtml(product.name)}</strong>
-        <small>${escapeHtml(product.sku || "")}</small>
+        <small>${escapeHtml(product.slug || "")}</small>
       </td>
-
-      <td>
-        ${escapeHtml(product.categories?.name || "—")}
-      </td>
-
-      <td>
-        ${
-          product.quote_only
-            ? "Quote"
-            : formatCurrency(product.price)
-        }
-      </td>
-
-      <td>
-        ${Number(product.stock_quantity || 0)}
-      </td>
-
-      <td>
-        ${
-          product.is_active
-            ? `<span class="status active">Active</span>`
-            : `<span class="status inactive">Inactive</span>`
-        }
-      </td>
-
-      <td>
-        ${product.unit || "—"}
-      </td>
-
-      <td>
-        ${formatDate(product.created_at)}
-      </td>
-
+      <td>${escapeHtml(product.categories?.name || "—")}</td>
+      <td>${product.quote_only ? "Quote" : formatCurrency(product.price)}</td>
+      <td>${Number(product.stock_quantity || 0)}</td>
+      <td>${product.is_active ? "Active" : "Inactive"}</td>
+      <td>${escapeHtml(product.unit || "—")}</td>
+      <td>${formatDate(product.created_at)}</td>
       <td>
         <div class="admin-actions">
-          <button
-            class="btn btn-small"
-            onclick="editProduct('${product.id}')"
-          >
-            Edit
-          </button>
-
-          <button
-            class="btn btn-small ${
-              product.is_active
-                ? "btn-danger"
-                : "btn-success"
-            }"
-            onclick="toggleProduct(
-              '${product.id}',
-              ${!product.is_active}
-            )"
-          >
-            ${
-              product.is_active
-                ? "Disable"
-                : "Enable"
-            }
+          <button type="button" class="btn btn-small"
+            data-edit-product="${escapeHtml(product.id)}">Edit</button>
+          <button type="button" class="btn btn-small"
+            data-toggle-product="${escapeHtml(product.id)}"
+            data-next-active="${String(!product.is_active)}">
+            ${product.is_active ? "Disable" : "Enable"}
           </button>
         </div>
       </td>
     </tr>
   `).join("");
+
+  tbody.querySelectorAll("[data-edit-product]").forEach(button => {
+    button.addEventListener("click", () => editProduct(button.dataset.editProduct));
+  });
+
+  tbody.querySelectorAll("[data-toggle-product]").forEach(button => {
+    button.addEventListener("click", () => {
+      toggleProduct(
+        button.dataset.toggleProduct,
+        button.dataset.nextActive === "true"
+      );
+    });
+  });
 }
 
 function resetProductForm() {
   adminState.editingProductId = null;
+  document.getElementById("productForm")?.reset();
 
-  const form =
-    document.getElementById("productForm");
+  const active = document.getElementById("productActive");
+  if (active) active.checked = true;
 
-  if (form) {
-    form.reset();
-  }
+  const quote = document.getElementById("productQuoteOnly");
+  if (quote) quote.checked = true;
 
-  const active =
-    document.getElementById("productActive");
+  const title = document.getElementById("productFormTitle");
+  if (title) title.textContent = "Add Product";
 
-  const quoteOnly =
-    document.getElementById("productQuoteOnly");
+  const button = document.querySelector("#productForm button[type='submit']");
+  if (button) button.textContent = "Save Product";
 
-  if (active) {
-    active.checked = true;
-  }
-
-  if (quoteOnly) {
-    quoteOnly.checked = true;
-  }
-
-  const title =
-    document.getElementById("productFormTitle");
-
-  if (title) {
-    title.textContent = "Add Product";
-  }
-
-  const submit =
-    document.querySelector(
-      "#productForm button[type='submit']"
-    );
-
-  if (submit) {
-    submit.textContent = "Save Product";
+  const sku = document.getElementById("productSku");
+  if (sku) {
+    const label = sku.closest("label");
+    if (label) label.hidden = true;
+    sku.hidden = true;
+    sku.disabled = true;
   }
 }
 
 function editProduct(id) {
-  const product =
-    adminState.products.find(
-      item => item.id === id
-    );
-
-  if (!product) {
-    return;
-  }
+  const product = adminState.products.find(item => item.id === id);
+  if (!product) return;
 
   adminState.editingProductId = id;
 
@@ -322,720 +489,298 @@ function editProduct(id) {
   setInputValue("productDescription", product.description);
   setInputValue("productPrice", product.price ?? "");
   setInputValue("productUnit", product.unit);
-  setInputValue(
-    "productStock",
-    product.stock_quantity ?? 0
-  );
+  setInputValue("productStock", product.stock_quantity ?? 0);
   setInputValue("productImage", product.image_url);
-  setInputValue("productSku", product.sku);
 
-  const quoteOnly =
-    document.getElementById("productQuoteOnly");
+  const quote = document.getElementById("productQuoteOnly");
+  if (quote) quote.checked = Boolean(product.quote_only);
 
-  const active =
-    document.getElementById("productActive");
+  const active = document.getElementById("productActive");
+  if (active) active.checked = Boolean(product.is_active);
 
-  if (quoteOnly) {
-    quoteOnly.checked =
-      Boolean(product.quote_only);
-  }
+  const title = document.getElementById("productFormTitle");
+  if (title) title.textContent = "Edit Product";
 
-  if (active) {
-    active.checked =
-      Boolean(product.is_active);
-  }
+  const button = document.querySelector("#productForm button[type='submit']");
+  if (button) button.textContent = "Update Product";
 
-  const title =
-    document.getElementById("productFormTitle");
-
-  if (title) {
-    title.textContent = "Edit Product";
-  }
-
-  const submit =
-    document.querySelector(
-      "#productForm button[type='submit']"
-    );
-
-  if (submit) {
-    submit.textContent = "Update Product";
-  }
-
-  document
-    .getElementById("productForm")
-    ?.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-}
-
-function setInputValue(id, value) {
-  const element =
-    document.getElementById(id);
-
-  if (element) {
-    element.value = value ?? "";
-  }
+  document.getElementById("productForm")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 }
 
 async function saveProduct(event) {
   event.preventDefault();
 
-  const product = {
-    name:
-      document.getElementById("productName")?.value || "",
-
-    category_id:
-      document.getElementById("productCategory")?.value || "",
-
-    description:
-      document.getElementById("productDescription")?.value || "",
-
-    price:
-      document.getElementById("productPrice")?.value || "",
-
-    unit:
-      document.getElementById("productUnit")?.value || "",
-
-    stock_quantity:
-      document.getElementById("productStock")?.value || 0,
-
-    image_url:
-      document.getElementById("productImage")?.value || "",
-
-    sku:
-      document.getElementById("productSku")?.value || "",
-
-    quote_only:
-      document.getElementById("productQuoteOnly")?.checked ?? true,
-
-    is_active:
-      document.getElementById("productActive")?.checked ?? true
-  };
+  const button = document.querySelector("#productForm button[type='submit']");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Saving...";
+  }
 
   try {
-    const button =
-      event.target.querySelector(
-        "button[type='submit']"
-      );
+    const name = document.getElementById("productName")?.value.trim() || "";
+    const priceInput = document.getElementById("productPrice")?.value ?? "";
+    const stockInput = document.getElementById("productStock")?.value ?? "0";
 
-    if (button) {
-      button.disabled = true;
-      button.textContent = "Saving...";
+    const product = {
+      name,
+      category_id: document.getElementById("productCategory")?.value || null,
+      short_description: "",
+      description: document.getElementById("productDescription")?.value.trim() || "",
+      price: priceInput === "" ? null : Number(priceInput),
+      unit: document.getElementById("productUnit")?.value.trim() || "",
+      stock_quantity: Number(stockInput),
+      image_url: document.getElementById("productImage")?.value.trim() || "",
+      quote_only: document.getElementById("productQuoteOnly")?.checked ?? true,
+      is_active: document.getElementById("productActive")?.checked ?? true
+    };
+
+    if (!product.name) throw new Error("Product name is required.");
+    if (priceInput !== "" && (!Number.isFinite(product.price) || product.price < 0)) {
+      throw new Error("Enter a valid non-negative price.");
+    }
+    if (!Number.isInteger(product.stock_quantity) || product.stock_quantity < 0) {
+      throw new Error("Stock must be a non-negative whole number.");
+    }
+    if (!product.quote_only && product.price === null) {
+      throw new Error("Enter a price or enable quotation-only mode.");
     }
 
     if (adminState.editingProductId) {
-      product.id =
-        adminState.editingProductId;
-
-      await adminRequest(
-        "update_product",
-        { product }
-      );
-
-      alert("Product updated successfully.");
+      product.id = adminState.editingProductId;
+      await adminRequest("update_product", { product });
     } else {
-      await adminRequest(
-        "create_product",
-        { product }
-      );
-
-      alert("Product created successfully.");
+      await adminRequest("create_product", { product });
     }
 
     resetProductForm();
-    await loadProducts();
-    await loadDashboardStats();
-
+    await Promise.all([loadProducts(), loadDashboardStats()]);
+    showAdminMessage("Product saved successfully.");
   } catch (error) {
-    console.error(error);
-    alert(error.message);
+    console.error("Product save failed:", error);
+    showAdminMessage(error.message, true);
   } finally {
-    const button =
-      event.target.querySelector(
-        "button[type='submit']"
-      );
-
+    if (button) button.disabled = false;
     if (button) {
-      button.disabled = false;
-      button.textContent =
-        adminState.editingProductId
-          ? "Update Product"
-          : "Save Product";
+      button.textContent = adminState.editingProductId
+        ? "Update Product"
+        : "Save Product";
     }
   }
 }
 
 async function toggleProduct(id, isActive) {
-  const action =
-    isActive ? "enable" : "disable";
+  const action = isActive ? "enable" : "disable";
 
-  if (
-    !confirm(
-      `Are you sure you want to ${action} this product?`
-    )
-  ) {
-    return;
-  }
+  if (!confirm(`Are you sure you want to ${action} this product?`)) return;
 
   try {
-    await adminRequest(
-      "toggle_product",
-      {
-        product: {
-          id,
-          is_active: isActive
-        }
-      }
-    );
+    await adminRequest("toggle_product", {
+      product: { id, is_active: isActive }
+    });
 
-    await loadProducts();
-    await loadDashboardStats();
-
+    await Promise.all([loadProducts(), loadDashboardStats()]);
+    showAdminMessage(`Product ${isActive ? "enabled" : "disabled"}.`);
   } catch (error) {
     console.error(error);
-    alert(error.message);
+    showAdminMessage(error.message, true);
   }
 }
 
-/* ----------------------------- ORDERS ----------------------------- */
+/* ---------------- ORDERS ---------------- */
 
 async function loadOrders() {
-  const orders =
-    await adminRequest("get_orders");
-
-  adminState.orders = orders || [];
-
+  adminState.orders = await adminRequest("get_orders") || [];
   renderOrders();
 }
 
-function renderOrders() {
-  const tbody =
-    document.getElementById("ordersTableBody");
+function orderStatusOptions(current) {
+  return ["pending", "confirmed", "processing", "ready", "completed", "cancelled"]
+    .map(status => `<option value="${status}" ${status === current ? "selected" : ""}>${capitalize(status)}</option>`)
+    .join("");
+}
 
+function renderOrders() {
+  const tbody = document.getElementById("ordersTableBody");
   if (!tbody) return;
 
-  const search =
-    (document.getElementById("orderSearch")?.value || "")
-      .toLowerCase()
-      .trim();
+  const search = (document.getElementById("orderSearch")?.value || "").toLowerCase().trim();
+  const statusFilter = document.getElementById("orderStatusFilter")?.value || "";
 
-  const statusFilter =
-    document.getElementById("orderStatusFilter")?.value || "";
+  const filtered = adminState.orders.filter(order => {
+    const text = [order.id, order.user_id, order.fulfilment_method, order.customer_note]
+      .join(" ").toLowerCase();
 
-  const filtered =
-    adminState.orders.filter(order => {
-      const searchText = [
-        order.id,
-        order.user_id,
-        order.fulfilment_method,
-        order.customer_note
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch =
-        searchText.includes(search);
-
-      const matchesStatus =
-        !statusFilter ||
-        order.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
+    return text.includes(search) && (!statusFilter || order.status === statusFilter);
+  });
 
   if (!filtered.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">
-          No orders found.
-        </td>
-      </tr>
-    `;
+    tbody.innerHTML = `<tr><td colspan="8">No orders found.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = filtered.map(order => `
     <tr>
-      <td>
-        <strong>${escapeHtml(
-          String(order.id).slice(0, 8)
-        )}</strong>
-      </td>
-
-      <td>
-        ${formatCurrency(order.total)}
-      </td>
-
-      <td>
-        ${escapeHtml(
-          order.fulfilment_method || "collection"
-        )}
-      </td>
-
-      <td>
-        ${escapeHtml(
-          order.payment_status || "pending"
-        )}
-      </td>
-
-      <td>
-        <select
-          onchange="changeOrderStatus(
-            '${order.id}',
-            this.value
-          )"
-        >
-          ${orderStatusOptions(order.status)}
-        </select>
-      </td>
-
-      <td>
-        ${formatDate(order.created_at)}
-      </td>
-
-      <td>
-        ${order.order_items?.length || 0}
-      </td>
-
-      <td>
-        ${escapeHtml(
-          order.customer_note || "—"
-        )}
-      </td>
+      <td><strong>${escapeHtml(String(order.id).slice(0, 8))}</strong></td>
+      <td>${formatCurrency(order.total)}</td>
+      <td>${escapeHtml(order.fulfilment_method || "collection")}</td>
+      <td>${escapeHtml(order.payment_status || "pending")}</td>
+      <td><select data-order-status="${escapeHtml(order.id)}">${orderStatusOptions(order.status)}</select></td>
+      <td>${formatDate(order.created_at)}</td>
+      <td>${order.order_items?.length || 0}</td>
+      <td>${escapeHtml(order.customer_note || "—")}</td>
     </tr>
   `).join("");
-}
 
-function orderStatusOptions(current) {
-  const statuses = [
-    "pending",
-    "confirmed",
-    "processing",
-    "ready",
-    "completed",
-    "cancelled"
-  ];
-
-  return statuses.map(status => `
-    <option
-      value="${status}"
-      ${status === current ? "selected" : ""}
-    >
-      ${capitalize(status)}
-    </option>
-  `).join("");
+  tbody.querySelectorAll("[data-order-status]").forEach(select => {
+    select.addEventListener("change", () => {
+      changeOrderStatus(select.dataset.orderStatus, select.value);
+    });
+  });
 }
 
 async function changeOrderStatus(id, status) {
   try {
-    await adminRequest(
-      "update_order_status",
-      {
-        order: {
-          id,
-          status
-        }
-      }
-    );
-
-    await loadOrders();
-    await loadDashboardStats();
-
+    await adminRequest("update_order_status", { order: { id, status } });
+    await Promise.all([loadOrders(), loadDashboardStats()]);
   } catch (error) {
-    console.error(error);
-    alert(error.message);
+    showAdminMessage(error.message, true);
     await loadOrders();
   }
 }
 
-/* ----------------------------- ENQUIRIES ----------------------------- */
+/* ---------------- ENQUIRIES ---------------- */
 
 async function loadEnquiries() {
-  const enquiries =
-    await adminRequest("get_enquiries");
-
-  adminState.enquiries =
-    enquiries || [];
-
+  adminState.enquiries = await adminRequest("get_enquiries") || [];
   renderEnquiries();
 }
 
-function renderEnquiries() {
-  const tbody =
-    document.getElementById(
-      "enquiriesTableBody"
-    );
+function enquiryStatusOptions(current) {
+  return ["new", "contacted", "quoted", "converted", "closed"]
+    .map(status => `<option value="${status}" ${status === current ? "selected" : ""}>${capitalize(status)}</option>`)
+    .join("");
+}
 
+function renderEnquiries() {
+  const tbody = document.getElementById("enquiriesTableBody");
   if (!tbody) return;
 
-  const search =
-    (
-      document.getElementById(
-        "enquirySearch"
-      )?.value || ""
-    )
-      .toLowerCase()
-      .trim();
+  const search = (document.getElementById("enquirySearch")?.value || "").toLowerCase().trim();
+  const statusFilter = document.getElementById("enquiryStatusFilter")?.value || "";
 
-  const statusFilter =
-    document.getElementById(
-      "enquiryStatusFilter"
-    )?.value || "";
+  const filtered = adminState.enquiries.filter(enquiry => {
+    const text = [enquiry.name, enquiry.email, enquiry.phone, enquiry.product, enquiry.location, enquiry.message]
+      .join(" ").toLowerCase();
 
-  const filtered =
-    adminState.enquiries.filter(enquiry => {
-      const searchText = [
-        enquiry.name,
-        enquiry.email,
-        enquiry.phone,
-        enquiry.product,
-        enquiry.location,
-        enquiry.message
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return (
-        searchText.includes(search) &&
-        (
-          !statusFilter ||
-          enquiry.status === statusFilter
-        )
-      );
-    });
+    return text.includes(search) && (!statusFilter || enquiry.status === statusFilter);
+  });
 
   if (!filtered.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">
-          No enquiries found.
-        </td>
-      </tr>
-    `;
+    tbody.innerHTML = `<tr><td colspan="8">No enquiries found.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = filtered.map(enquiry => `
     <tr>
-      <td>
-        <strong>
-          ${escapeHtml(enquiry.name || "—")}
-        </strong>
-      </td>
-
-      <td>
-        ${escapeHtml(enquiry.phone || "—")}
-      </td>
-
-      <td>
-        ${escapeHtml(enquiry.email || "—")}
-      </td>
-
-      <td>
-        ${escapeHtml(enquiry.product || "—")}
-      </td>
-
-      <td>
-        ${escapeHtml(enquiry.quantity || "—")}
-      </td>
-
-      <td>
-        <select
-          onchange="changeEnquiryStatus(
-            '${enquiry.id}',
-            this.value
-          )"
-        >
-          ${enquiryStatusOptions(enquiry.status)}
-        </select>
-      </td>
-
-      <td>
-        ${formatDate(enquiry.created_at)}
-      </td>
-
-      <td>
-        ${escapeHtml(enquiry.message || "—")}
-      </td>
+      <td>${escapeHtml(enquiry.name || "—")}</td>
+      <td>${escapeHtml(enquiry.phone || "—")}</td>
+      <td>${escapeHtml(enquiry.email || "—")}</td>
+      <td>${escapeHtml(enquiry.product || "—")}</td>
+      <td>${escapeHtml(enquiry.quantity || "—")}</td>
+      <td><select data-enquiry-status="${escapeHtml(enquiry.id)}">${enquiryStatusOptions(enquiry.status)}</select></td>
+      <td>${formatDate(enquiry.created_at)}</td>
+      <td>${escapeHtml(enquiry.message || "—")}</td>
     </tr>
   `).join("");
-}
 
-function enquiryStatusOptions(current) {
-  const statuses = [
-    "new",
-    "contacted",
-    "quoted",
-    "converted",
-    "closed"
-  ];
-
-  return statuses.map(status => `
-    <option
-      value="${status}"
-      ${status === current ? "selected" : ""}
-    >
-      ${capitalize(status)}
-    </option>
-  `).join("");
+  tbody.querySelectorAll("[data-enquiry-status]").forEach(select => {
+    select.addEventListener("change", () => {
+      changeEnquiryStatus(select.dataset.enquiryStatus, select.value);
+    });
+  });
 }
 
 async function changeEnquiryStatus(id, status) {
   try {
-    await adminRequest(
-      "update_enquiry_status",
-      {
-        enquiry: {
-          id,
-          status
-        }
-      }
-    );
-
-    await loadEnquiries();
-    await loadDashboardStats();
-
+    await adminRequest("update_enquiry_status", { enquiry: { id, status } });
+    await Promise.all([loadEnquiries(), loadDashboardStats()]);
   } catch (error) {
-    console.error(error);
-    alert(error.message);
+    showAdminMessage(error.message, true);
     await loadEnquiries();
   }
 }
 
-/* ----------------------------- CUSTOMERS ----------------------------- */
+/* ---------------- CUSTOMERS ---------------- */
 
 async function loadCustomers() {
-  const customers =
-    await adminRequest("get_customers");
-
-  adminState.customers =
-    customers || [];
-
+  adminState.customers = await adminRequest("get_customers") || [];
   renderCustomers();
 }
 
 function renderCustomers() {
-  const tbody =
-    document.getElementById(
-      "customersTableBody"
-    );
-
+  const tbody = document.getElementById("customersTableBody");
   if (!tbody) return;
 
-  const search =
-    (
-      document.getElementById(
-        "customerSearch"
-      )?.value || ""
-    )
-      .toLowerCase()
-      .trim();
+  const search = (document.getElementById("customerSearch")?.value || "").toLowerCase().trim();
 
-  const filtered =
-    adminState.customers.filter(customer => {
-      const text = [
-        customer.full_name,
-        customer.email,
-        customer.phone
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return text.includes(search);
-    });
+  const filtered = adminState.customers.filter(customer =>
+    [customer.full_name, customer.email, customer.phone].join(" ").toLowerCase().includes(search)
+  );
 
   if (!filtered.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6">
-          No customers found.
-        </td>
-      </tr>
-    `;
+    tbody.innerHTML = `<tr><td colspan="6">No customers found.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = filtered.map(customer => `
     <tr>
-      <td>
-        ${escapeHtml(
-          customer.full_name || "—"
-        )}
-      </td>
-
-      <td>
-        ${escapeHtml(
-          customer.email || "—"
-        )}
-      </td>
-
-      <td>
-        ${escapeHtml(
-          customer.phone || "—"
-        )}
-      </td>
-
-      <td>
-        ${escapeHtml(
-          customer.role || "customer"
-        )}
-      </td>
-
-      <td>
-        ${formatDate(customer.created_at)}
-      </td>
-
-      <td>
-        ${escapeHtml(customer.id)}
-      </td>
+      <td>${escapeHtml(customer.full_name || "—")}</td>
+      <td>${escapeHtml(customer.email || "—")}</td>
+      <td>${escapeHtml(customer.phone || "—")}</td>
+      <td>${escapeHtml(customer.role || "customer")}</td>
+      <td>${formatDate(customer.created_at)}</td>
+      <td>${escapeHtml(customer.id)}</td>
     </tr>
   `).join("");
 }
 
-/* ----------------------------- UTILITIES ----------------------------- */
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function capitalize(value) {
-  if (!value) return "";
-
-  return String(value)
-    .charAt(0)
-    .toUpperCase() +
-    String(value).slice(1);
-}
-
-function formatDate(value) {
-  if (!value) return "—";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return date.toLocaleDateString(
-    "en-ZW",
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric"
-    }
-  );
-}
-
-function formatCurrency(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "Quote";
-  }
-
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
-    return "Quote";
-  }
-
-  return `$${number.toFixed(2)}`;
-}
-
-/* ----------------------------- EVENTS ----------------------------- */
+/* ---------------- EVENTS AND INITIALIZATION ---------------- */
 
 function setupAdminEvents() {
-  const productForm =
-    document.getElementById("productForm");
+  document.getElementById("productForm")?.addEventListener("submit", saveProduct);
+  document.getElementById("productSearch")?.addEventListener("input", renderProducts);
+  document.getElementById("orderSearch")?.addEventListener("input", renderOrders);
+  document.getElementById("orderStatusFilter")?.addEventListener("change", renderOrders);
+  document.getElementById("enquirySearch")?.addEventListener("input", renderEnquiries);
+  document.getElementById("enquiryStatusFilter")?.addEventListener("change", renderEnquiries);
+  document.getElementById("customerSearch")?.addEventListener("input", renderCustomers);
+  document.getElementById("resetProductButton")?.addEventListener("click", resetProductForm);
+  document.getElementById("logoutButton")?.addEventListener("click", logoutAdmin);
 
-  if (productForm) {
-    productForm.addEventListener(
-      "submit",
-      saveProduct
-    );
-  }
+  const quote = document.getElementById("productQuoteOnly");
+  const price = document.getElementById("productPrice");
 
-  document
-    .getElementById("productSearch")
-    ?.addEventListener(
-      "input",
-      renderProducts
-    );
-
-  document
-    .getElementById("orderSearch")
-    ?.addEventListener(
-      "input",
-      renderOrders
-    );
-
-  document
-    .getElementById("orderStatusFilter")
-    ?.addEventListener(
-      "change",
-      renderOrders
-    );
-
-  document
-    .getElementById("enquirySearch")
-    ?.addEventListener(
-      "input",
-      renderEnquiries
-    );
-
-  document
-    .getElementById("enquiryStatusFilter")
-    ?.addEventListener(
-      "change",
-      renderEnquiries
-    );
-
-  document
-    .getElementById("customerSearch")
-    ?.addEventListener(
-      "input",
-      renderCustomers
-    );
-
-  document
-    .getElementById("resetProductButton")
-    ?.addEventListener(
-      "click",
-      resetProductForm
-    );
-
-  document
-    .getElementById("logoutButton")
-    ?.addEventListener(
-      "click",
-      logoutAdmin
-    );
+  quote?.addEventListener("change", () => {
+    if (price) {
+      price.required = !quote.checked;
+      price.disabled = quote.checked;
+      if (quote.checked) price.value = "";
+    }
+  });
 }
 
 async function logoutAdmin() {
-  await supabase.auth.signOut();
-
+  await getSupabaseClient().auth.signOut();
   window.location.href = "auth.html";
 }
 
-/* ----------------------------- INITIALIZATION ----------------------------- */
-
 async function initAdmin() {
   try {
-    const allowed =
-      await checkAdminAccess();
-
-    if (!allowed) {
-      return;
-    }
+    const allowed = await checkAdminAccess();
+    if (!allowed) return;
 
     setupAdminEvents();
 
@@ -1047,18 +792,10 @@ async function initAdmin() {
       loadCustomers(),
       loadDashboardStats()
     ]);
-
   } catch (error) {
     console.error("Admin initialization error:", error);
-
-    alert(
-      error.message ||
-      "Unable to load administrator dashboard."
-    );
+    showAdminMessage(error.message || "Unable to load the administrator dashboard.", true);
   }
 }
 
-document.addEventListener(
-  "DOMContentLoaded",
-  initAdmin
-);
+document.addEventListener("DOMContentLoaded", initAdmin);
